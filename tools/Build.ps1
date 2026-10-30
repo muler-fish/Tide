@@ -33,14 +33,14 @@ try {
     Copy-Item -LiteralPath (Join-Path $package 'LICENSE.md') -Destination (Join-Path $licenses 'WPF-UI-LICENSE.md')
     Copy-Item -LiteralPath (Join-Path $package 'ThirdPartyNotices.txt') -Destination (Join-Path $licenses 'WPF-UI-ThirdPartyNotices.txt')
     # 二维码识别使用 ZXing.Net；许可证随自包含 EXE 交付，构建时不再联网下载。
-    Copy-Item -LiteralPath 'docs\licenses\ZXing.Net-LICENSE.txt' -Destination (Join-Path $licenses 'ZXing.Net-LICENSE.txt')
-    Copy-Item -LiteralPath 'docs\licenses\NotoSansTagbanwa-OFL.txt' -Destination (Join-Path $licenses 'NotoSansTagbanwa-OFL.txt')
-    Copy-Item -LiteralPath 'docs\licenses\NotoSansBatak-OFL.txt' -Destination (Join-Path $licenses 'NotoSansBatak-OFL.txt')
-    Copy-Item -LiteralPath 'docs\licenses\EmoticonData-NOTICE.txt' -Destination (Join-Path $licenses 'EmoticonData-NOTICE.txt')
-    Copy-Item -LiteralPath 'docs\licenses\MiSans-LICENSE.pdf' -Destination (Join-Path $licenses 'MiSans-LICENSE.pdf')
-    Copy-Item -LiteralPath 'docs\licenses\MiSans-NOTICE.txt' -Destination (Join-Path $licenses 'MiSans-NOTICE.txt')
+    Copy-Item -LiteralPath 'licenses\ZXing.Net-LICENSE.txt' -Destination (Join-Path $licenses 'ZXing.Net-LICENSE.txt')
+    Copy-Item -LiteralPath 'licenses\NotoSansTagbanwa-OFL.txt' -Destination (Join-Path $licenses 'NotoSansTagbanwa-OFL.txt')
+    Copy-Item -LiteralPath 'licenses\NotoSansBatak-OFL.txt' -Destination (Join-Path $licenses 'NotoSansBatak-OFL.txt')
+    Copy-Item -LiteralPath 'licenses\EmoticonData-NOTICE.txt' -Destination (Join-Path $licenses 'EmoticonData-NOTICE.txt')
+    Copy-Item -LiteralPath 'licenses\MiSans-LICENSE.pdf' -Destination (Join-Path $licenses 'MiSans-LICENSE.pdf')
+    Copy-Item -LiteralPath 'licenses\MiSans-NOTICE.txt' -Destination (Join-Path $licenses 'MiSans-NOTICE.txt')
     foreach ($notice in @('Emoji-NOTICE.txt', 'Emoji.Wpf-LICENSE.txt', 'Typography-NOTICES.md', 'Typography-MIT.txt', 'FreeType-LICENSE.txt', 'Unicode-LICENSE.txt', 'JeremyAnsel.HLSL-LICENSE.txt')) {
-        Copy-Item -LiteralPath (Join-Path 'docs\licenses' $notice) -Destination (Join-Path $licenses $notice)
+        Copy-Item -LiteralPath (Join-Path 'licenses' $notice) -Destination (Join-Path $licenses $notice)
     }
     $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $target 'Tide.exe')).Hash
     Set-Content -LiteralPath (Join-Path $target 'SHA256SUMS.txt') -Value "$hash  Tide.exe" -Encoding utf8

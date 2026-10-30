@@ -26,5 +26,7 @@ artifacts/
 /cookies.json
 /subscriptions.json
 
-# Historical source material excluded from the current emoticon catalogue
-/docs/sources/emoticons/gboard-0.9.1.txt
+# Local design, research and acceptance records
+/docs/
+/CHANGELOG.md
+/THIRD_PARTY_NOTICES.md

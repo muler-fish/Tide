@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCES = ROOT / "docs/sources/emoticons"
+SOURCES = ROOT / "tools/emoticons"
 entries = {}
 names = set()
 
