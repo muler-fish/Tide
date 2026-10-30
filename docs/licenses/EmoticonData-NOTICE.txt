@@ -1,0 +1,20 @@
+潮汐颜文字资料来源（2026-10-25）
+
+X 岛网页基础颜文字：
+https://www.nmbxd1.com/f/综合版1
+https://www.nmbxd1.com/Public/Js/h.desktop.js
+
+网页扩展颜文字：X岛-EX，SayaGoodBye，版本 4.2.0。
+https://github.com/SayaGoodBye/nmbxd-EX/blob/main/nmbxd-EX.user.js
+提取来源 blob SHA：b754a2bd5fa2067caaf18f57b51655e6a2bf1bfe
+上游脚本元数据声明许可证为 WTFPL。
+仅提取 EXTRA_EMOTS / EXTRA_RICH 的静态颜文字数据，未引入脚本代码或执行脚本。
+
+补充资料：用户提供的《蓝岛颜文字.txt》。Gboard 资料未用于本版本。
+网页条目优先；去重及单个符号过滤后内置 197 项，保留图案的排版空白。
+兼容处理：图案“҉( ﾟ∀。)”的组合符号前补一个 U+200B 零宽基底，避免 WPF 缺字回退。
+
+随包字体：Noto Sans Tagbanwa、Noto Sans Batak，SIL Open Font License 1.1。
+完整字体许可见 NotoSansTagbanwa-OFL.txt、NotoSansBatak-OFL.txt。
+https://github.com/google/fonts/tree/main/ofl/notosanstagbanwa
+https://github.com/google/fonts/tree/main/ofl/notosansbatak

@@ -1,0 +1,25 @@
+Emoji.Wpf 0.3.4 — Copyright 2017–2023 Sam Hocevar.
+https://github.com/samhocevar/emoji.wpf
+Stfu 0.1.1 — Copyright 2017–2021 Sam Hocevar.
+https://github.com/samhocevar/stfu
+Both use the WTFPL v2 text in Emoji.Wpf-LICENSE.txt.
+
+Emoji.Wpf bundles Typography.OpenFont and Typography.GlyphLayout.
+Source: https://github.com/samhocevar-forks/typography/tree/e413bc6c20709d71ed6f06e152eaa63a891cdd11
+Typography project: MIT; individual components also use Apache 2.0,
+FreeType and Unicode licenses. See Typography-NOTICES.md and accompanying
+Typography-MIT.txt, ZXing.Net-LICENSE.txt (Apache 2.0), FreeType-LICENSE.txt
+and Unicode-LICENSE.txt. Portions of this software are copyright
+1996-2002, 2006 The FreeType Project (www.freetype.org). All rights reserved.
+
+The runtime reads Segoe UI Emoji installed with Windows. No Microsoft or
+Apple emoji font is redistributed by Tide. Emoji.Wpf also includes its
+own flag fallback drawings. Unicode emoji sequence data is used to
+recognize sequences; see Unicode-LICENSE.txt.
+
+Tide's emoji-sequences.json is derived from Unicode 17.0 emoji-test.txt,
+Copyright 2025 Unicode, Inc. Sources:
+https://github.com/unicode-org/unicodetools/blob/main/unicodetools/data/emoji/17.0/emoji-test.txt
+https://www.unicode.org/reports/tr51/
+It retains fully-qualified entries and accepted ZWJ/keycap variants, sorted
+longest first. Default-text characters such as bare arrows stay text.

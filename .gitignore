@@ -1,0 +1,30 @@
+**/bin/
+**/obj/
+.vs/
+.build/
+release/
+artifacts/
+.reference-*
+*.user
+*.log
+
+# Local settings, credentials and application profiles
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.key
+*.dpapi
+*.suo
+/profile/
+/profiles/
+/TideIsland/
+/state.json
+/cookies.json
+/subscriptions.json
+
+# Historical source material excluded from the current emoticon catalogue
+/docs/sources/emoticons/gboard-0.9.1.txt

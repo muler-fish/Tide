@@ -1,0 +1,144 @@
+using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using Tide.Core;
+
+namespace Tide.Desktop;
+
+/// <summary>下载与解码图片；独立 HttpClient 不附带饼干，下载并发限制为 4。</summary>
+public static class ImageService
+{
+    private static readonly HttpClient Http = new(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All, AllowAutoRedirect = false, UseCookies = false }) { Timeout = TimeSpan.FromSeconds(20) };
+    private static readonly SemaphoreSlim Slots = new(4);
+    // 缩略图仅缓存在内存，当前调用方在 WPF 界面线程上访问此字典。
+    private static readonly Dictionary<string, BitmapSource> Cache = [];
+
+    public static async Task<byte[]> BytesAsync(string url, CancellationToken ct = default)
+    {
+        // 只请求已知图片站；调用方不能借此下载任意域名或本地协议的资源。
+        var uri = new Uri(url);
+        if (uri.Scheme != "https" || uri.Host != "image.nmb.best") throw new ArgumentException("不支持的图片地址。");
+        await Slots.WaitAsync(ct);
+        try
+        {
+            using var response = await Http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, ct);
+            response.EnsureSuccessStatusCode();
+            const int limit = 20 * 1024 * 1024;
+            // 同时检查响应声明和实际读取量，避免缺少 Content-Length 时绕过大小限制。
+            if (response.Content.Headers.ContentLength > limit) throw new InvalidDataException("图片超过 20 MB，请在网页中查看。");
+            using var input = await response.Content.ReadAsStreamAsync(ct);
+            using var output = new MemoryStream();
+            var buffer = new byte[65536]; int count;
+            while ((count = await input.ReadAsync(buffer, ct)) > 0)
+            {
+                if (output.Length + count > limit) throw new InvalidDataException("图片过大。");
+                output.Write(buffer, 0, count);
+            }
+            return output.ToArray();
+        }
+        finally { Slots.Release(); }
+    }
+    public static async Task<BitmapSource> LoadAsync(string url, CancellationToken ct)
+    {
+        if (Cache.TryGetValue(url, out var cached)) return cached;
+        var bytes = await BytesAsync(url, ct);
+        // 列表缩略图限制解码宽度并最多保留 80 项，减少长期阅读时的内存占用。
+        var bitmap = await Task.Run(() => Decode(bytes, 700), ct);
+        ct.ThrowIfCancellationRequested();
+        if (Cache.Count >= 80) Cache.Remove(Cache.Keys.First());
+        Cache[url] = bitmap; return bitmap;
+    }
+    public static BitmapSource Decode(byte[] bytes, int width = 0)
+    {
+        // OnLoad 确保离开此方法后可关闭流；Freeze 后图像不可变，可被多个控件安全复用。
+        using var stream = new MemoryStream(bytes);
+        var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad;
+        if (width > 0) image.DecodePixelWidth = width;
+        image.StreamSource = stream; image.EndInit(); image.Freeze(); return image;
+    }
+}
+
+/// <summary>串列表和正文共用的缩略图控件，处理无图模式、重试，以及虚拟化列表复用时的请求取消。</summary>
+public sealed class PostImage : ContentControl
+{
+    public static readonly DependencyProperty PostProperty = DependencyProperty.Register(nameof(Post), typeof(Post), typeof(PostImage), new PropertyMetadata(null, Changed));
+    public static readonly DependencyProperty ShowImagesProperty = DependencyProperty.Register(nameof(ShowImages), typeof(bool), typeof(PostImage), new PropertyMetadata(true, Changed));
+    public static readonly DependencyProperty PreviewHeightProperty = DependencyProperty.Register(nameof(PreviewHeight), typeof(double), typeof(PostImage), new PropertyMetadata(double.NaN, Changed));
+    public static readonly DependencyProperty PreviewMaxWidthProperty = DependencyProperty.Register(nameof(PreviewMaxWidth), typeof(double), typeof(PostImage), new PropertyMetadata(440d, Changed));
+    public Post? Post { get => (Post?)GetValue(PostProperty); set => SetValue(PostProperty, value); }
+    public bool ShowImages { get => (bool)GetValue(ShowImagesProperty); set => SetValue(ShowImagesProperty, value); }
+    // 串列表使用固定预留高度；正文保持按比例自然高度。尺寸都是 WPF 逻辑像素。
+    public double PreviewHeight { get => (double)GetValue(PreviewHeightProperty); set => SetValue(PreviewHeightProperty, value); }
+    public double PreviewMaxWidth { get => (double)GetValue(PreviewMaxWidthProperty); set => SetValue(PreviewMaxWidthProperty, value); }
+    public static event Action<PostImage, Post>? ImageClicked;
+    private readonly Func<string, CancellationToken, Task<BitmapSource>> _load;
+    private CancellationTokenSource? _cts;
+    private int _version;
+    public PostImage() : this(ImageService.LoadAsync) { }
+    internal PostImage(Func<string, CancellationToken, Task<BitmapSource>> load)
+    {
+        _load = load;
+        Loaded += (_, _) => Update();
+        Unloaded += (_, _) => { _cts?.Cancel(); ++_version; };
+    }
+    private static void Changed(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((PostImage)d).Update();
+    private async void Update()
+    {
+        // 同一个控件可能换绑到另一帖子；取消旧请求并更新版本，避免慢图显示到新帖子上。
+        _cts?.Cancel(); _cts?.Dispose(); _cts = new(); var version = ++_version; var ct = _cts.Token;
+        var post = Post; var url = post?.ImageUrl(true);
+        Visibility = url is null ? Visibility.Collapsed : Visibility.Visible;
+        if (url is null || post is null) { Content = null; return; }
+        var button = new Button
+        {
+            HorizontalAlignment = HorizontalAlignment.Left, HorizontalContentAlignment = HorizontalAlignment.Left,
+            Height = ShowImages ? PreviewHeight : double.NaN, Padding = new(4),
+            Content = ShowImages ? new ImageLoading(double.IsNaN(PreviewHeight) ? 144 : 58, double.IsNaN(PreviewHeight) ? 92 : Math.Max(24, PreviewHeight - 12)) : "显示这张图片", ToolTip = "点击查看原图"
+        };
+        System.Windows.Automation.AutomationProperties.SetName(button, $"查看 {post.Number} 的图片");
+        Content = button;
+        // 无图模式保留手动打开入口，只有用户点击时才去原图窗口加载图片。
+        var failed = false;
+        button.Click += (_, _) => { if (failed) Update(); else ImageClicked?.Invoke(this, post); };
+        if (!ShowImages) return;
+        if (!IsLoaded) return;
+        try
+        {
+            var image = await _load(url, ct);
+            if (version != _version || ct.IsCancellationRequested) return;
+            button.Content = new Image
+            {
+                Source = image, Stretch = Stretch.Uniform,
+                MaxHeight = double.IsNaN(PreviewHeight) ? 260 : Math.Max(1, PreviewHeight - 10),
+                MaxWidth = PreviewMaxWidth, HorizontalAlignment = HorizontalAlignment.Left
+            };
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception)
+        {
+            if (version != _version) return;
+            failed = true;
+            button.Content = "重试";
+            button.ToolTip = "图片加载失败，点击重试";
+            System.Windows.Automation.AutomationProperties.SetName(button, $"重新加载 {post.Number} 的图片");
+        }
+    }
+}
+
+/// <summary>轻量加载占位；关闭系统动画时显示静态进度，缓存命中时直接被图片替换。</summary>
+internal sealed class ImageLoading : Grid
+{
+    internal ImageLoading(double width, double height)
+    {
+        Width = width; Height = height;
+        var bar = new ProgressBar { Width = Math.Min(72, width - 12), Height = 3,
+            IsIndeterminate = SystemParameters.ClientAreaAnimation, Value = 50, VerticalAlignment = VerticalAlignment.Center };
+        bar.SetResourceReference(Control.ForegroundProperty, "Accent");
+        Children.Add(bar);
+        System.Windows.Automation.AutomationProperties.SetName(this, "正在加载图片");
+    }
+}

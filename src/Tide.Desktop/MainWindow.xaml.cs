@@ -1,0 +1,219 @@
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using Tide.Core;
+
+namespace Tide.Desktop;
+
+/// <summary>处理必须接触窗口或控件的操作：焦点、滚动、弹窗及外部链接；数据逻辑交给 MainViewModel。</summary>
+public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
+{
+    public MainViewModel Model { get; }
+    private ReadingAnchor? _readerAnchor;
+    private readonly ReadingProgressTracker _readingProgress;
+    private readonly MainLayoutController _layout;
+    private readonly Action<string> _openBrowser;
+    private bool _closed;
+    public MainWindow(MainViewModel model) : this(model, url => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })) { }
+    internal MainWindow(MainViewModel model, Action<string> openBrowser)
+    {
+        // DataContext 是 MainWindow.xaml 里普通 Binding 的默认数据来源。
+        InitializeComponent(); Model = model; DataContext = model; _openBrowser = openBrowser;
+        _readingProgress = new(ReaderList, model);
+        model.ReaderLeaving += _readingProgress.Flush;
+        Closing += (_, _) => _readingProgress.Flush();
+        _layout = new(this);
+        model.ReaderReset += ResetReader;
+        model.ReaderPrepending += BeforePrepend;
+        model.ReaderPrepended += AfterPrepend;
+        model.ListReset += ResetList;
+        model.FeedbackRaised += FeedbackReceived;
+        model.PropertyChanged += FeedbackStateChanged;
+        Loaded += (_, _) => { if (Model.HasError) ShowFeedback(Model.Error, FeedbackArea.General, true); };
+        Deactivated += (_, _) => FeedbackLayer.Clear();
+        PostBody.ReferenceClicked += Reference;
+        PostBody.UrlClicked += ContentLinkClicked;
+        PostImage.ImageClicked += OpenImage;
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.L && Keyboard.Modifiers == ModifierKeys.Control) { JumpBox.Focus(); JumpBox.SelectAll(); e.Handled = true; }
+        };
+        Closed += (_, _) =>
+        {
+            _closed = true;
+            // 正文和图片控件使用静态事件，关闭窗口时必须退订，避免旧窗口被事件引用保留。
+            model.ReaderReset -= ResetReader; model.ListReset -= ResetList; PostBody.ReferenceClicked -= Reference; PostBody.UrlClicked -= ContentLinkClicked; PostImage.ImageClicked -= OpenImage;
+            model.ReaderPrepending -= BeforePrepend; model.ReaderPrepended -= AfterPrepend;
+            model.ReaderLeaving -= _readingProgress.Flush; _readingProgress.Dispose(); _layout.Dispose();
+            model.FeedbackRaised -= FeedbackReceived; model.PropertyChanged -= FeedbackStateChanged; FeedbackLayer.Clear();
+            model.Save(); model.Dispose();
+        };
+    }
+    private void ResetReader()
+    {
+        InertialScroll.Stop(ReaderList);
+        _readerAnchor = null;
+        IncrementalScroll.Reset(ReaderList, Model.ReaderStartsAfterFirstPage || Model.ReaderRestorePosition is not null);
+        if (Model.ReaderRestorePosition is null)
+        {
+            if (Model.ReadingPosts.Count > 0) ReaderList.ScrollIntoView(Model.ReadingPosts[0]);
+            ReadingAnchor.Children<ScrollViewer>(ReaderList).FirstOrDefault()?.ScrollToVerticalOffset(0);
+        }
+        _readingProgress.Reset(Model.ReaderRestorePosition);
+    }
+    private void BeforePrepend() { InertialScroll.Stop(ReaderList); _readingProgress.Pause(); _readerAnchor = ReadingAnchor.Capture(ReaderList); }
+    private void AfterPrepend()
+    {
+        IncrementalScroll.PrependCompleted(ReaderList);
+        _readerAnchor?.Restore(ReaderList); _readerAnchor = null;
+        _readingProgress.Resume();
+    }
+    private void ResetList()
+    {
+        InertialScroll.Stop(ThreadList);
+        if (Model.VisiblePostCount > 0) ThreadList.ScrollIntoView(Model.VisiblePosts.GetItemAt(0));
+    }
+    private async void Forum_Click(object sender, RoutedEventArgs e) { if (((Button)sender).Tag is Forum f) await Model.SelectForumAsync(f); }
+    private async void HomeTimeline_Click(object sender, RoutedEventArgs e) => await Model.SelectForumAsync(Model.State.Forums.Find(f => f.IsTimeline && f.Id == 1) ?? new(1, "综合线", "时间线", "", true, 20));
+    private async void Thread_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ThreadList.SelectedItem is PostCard post) await Model.OpenThreadAsync(post.Post.Id);
+    }
+    private void Jump_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) { Model.JumpCommand.Execute(null); e.Handled = true; } }
+    private void Page_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) { Model.JumpPageCommand.Execute(null); e.Handled = true; } }
+    private void Page_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) => ((TextBox)sender).SelectAll();
+    private void Page_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        var input = (TextBox)sender;
+        // 只接管首次左键聚焦；随后点击、拖选、双击和右键菜单仍由原生编辑控件处理。
+        if (e.ChangedButton != MouseButton.Left || input.IsKeyboardFocusWithin) return;
+        input.Focus(); input.SelectAll(); e.Handled = true;
+    }
+    private async void QuickThread_Click(object sender, RoutedEventArgs e)
+    {
+        if (long.TryParse(((Button)sender).Tag?.ToString(), out var id)) await Model.OpenThreadAsync(id);
+    }
+    private void Theme_Click(object sender, RoutedEventArgs e)
+    {
+        Model.State.Theme = Model.State.Theme == "dark" ? "light" : "dark"; App.ApplyTheme(Model.State.Theme); Model.AppearanceChanged();
+    }
+    private async void Cookies_Click(object sender, RoutedEventArgs e)
+    {
+        var thread = Model.Original?.Id; var identity = Model.State.ActiveCookieId;
+        new CookieWindow(Model) { Owner = this }.ShowDialog();
+        Model.ApplyCookie(); Model.Save(); await Model.RefreshListAsync();
+        // 切换身份会清理旧内容；重开刚才的串以便立刻核验权限，位置仍由本机进度恢复。
+        if (identity != Model.State.ActiveCookieId && thread is { } id) await Model.OpenThreadAsync(id, refresh: true);
+    }
+    private void Settings_Click(object sender, RoutedEventArgs e) => new SettingsWindow(Model) { Owner = this }.ShowDialog();
+    private async void SubscriptionSettings_Click(object sender, RoutedEventArgs e)
+    {
+        new SubscriptionWindow(Model) { Owner = this }.ShowDialog();
+        await Model.LoadSubscriptionsAsync();
+    }
+    private void Notice_Click(object sender, RoutedEventArgs e)
+    {
+        var forum = Model.ActiveForum;
+        var html = forum?.Notice;
+        new TextWindow(forum is null ? "全岛版规" : forum.Name + " · 版规", string.IsNullOrWhiteSpace(html) ? "请阅读 <a href=\"https://www.nmbxd1.com/t/50000001\">全岛总版规</a>。部分版块需要有效饼干才能访问。" : html) { Owner = this }.ShowDialog();
+    }
+    private void NewThread_Click(object sender, RoutedEventArgs e) { if (Model.ShowNewThreadAction) OpenComposer(0); }
+    private void Reply_Click(object sender, RoutedEventArgs e) { if (Model.CanInteractThread && Model.Original is not null) OpenComposer(Model.Original.Id); }
+    private void Quote_Click(object sender, RoutedEventArgs e)
+    {
+        if (((Button)sender).Tag is Post { IsSiteTip: false } post && Model.Original is not null) OpenComposer(Model.Original.Id, $">>No.{post.Id}\n");
+    }
+    private async void OpenComposer(long id, string quote = "")
+    {
+        // 编辑器负责保存草稿和发送；返回后根据发送结果、身份变化刷新相关列表。
+        var identity = Model.State.ActiveCookieId;
+        var composer = new ComposerWindow(Model, id, quote) { Owner = this };
+        composer.ShowDialog();
+        if (composer.Delivered && id > 0) await Model.OpenThreadAsync(id, refresh: true);
+        if (composer.Delivered || identity != Model.State.ActiveCookieId) await Model.RefreshListAsync();
+    }
+    private void Drafts_Click(object sender, RoutedEventArgs e)
+    {
+        new DraftWindow(Model, (draft) => new ComposerWindow(Model, draft.ThreadId, "", draft) { Owner = this }.ShowDialog()) { Owner = this }.ShowDialog();
+    }
+    private void CopyThreadLink_Click(object sender, RoutedEventArgs e)
+    {
+        if (Model.Original is null) return;
+        try { Clipboard.SetText($"{XIslandApi.Site}/t/{Model.Original.Id}"); ShowFeedback("已复制串链接", FeedbackArea.Reader, anchor: (FrameworkElement)sender); }
+        catch (System.Runtime.InteropServices.ExternalException) { ShowFeedback("剪贴板暂时不可用，请重试。", FeedbackArea.Reader, true, (FrameworkElement)sender); }
+    }
+    private void PostHeader_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        // 阅读栏可拖窄：日期换行后仍完整可见，楼号始终留在右上角。
+        var header = (Grid)sender;
+        var date = header.Children.OfType<TextBlock>().Single();
+        var compact = header.ActualWidth < 480;
+        Grid.SetRow(date, compact ? 1 : 0); Grid.SetColumn(date, compact ? 0 : 1);
+        Grid.SetColumnSpan(date, compact ? 3 : 1);
+        date.Margin = compact ? new Thickness(0, 6, 0, 0) : new Thickness(8, 0, 8, 0);
+        header.ColumnDefinitions[2].Width = compact ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
+    }
+    public void OpenExternal(string url)
+    {
+        try
+        {
+            // 帖子内容不可信：交给系统浏览器前只接受 HTTP/HTTPS，拒绝文件和自定义协议。
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")) throw new ArgumentException("只支持 HTTP/HTTPS 网页链接。");
+            _openBrowser(uri.AbsoluteUri);
+        }
+        catch (Exception ex) { Model.Report(ex); }
+    }
+    private async void ContentLinkClicked(System.Windows.Documents.Hyperlink source, string url)
+    {
+        // 引用/版规等子窗口也属于其主窗口；其他主窗口不能响应同一个静态事件。
+        var owner = Window.GetWindow(source);
+        while (owner is not null && owner is not MainWindow) owner = owner.Owner;
+        if (!ReferenceEquals(owner, this)) return;
+        await OpenContentLinkAsync(url, Window.GetWindow(source));
+    }
+    internal Task OpenContentLinkAsync(string url, Window? sourceWindow = null)
+    {
+        if (_closed) return Task.CompletedTask;
+        try
+        {
+            var link = IslandLink.Parse(url) ?? throw new ArgumentException("只支持 HTTP/HTTPS 网页链接。");
+            // 从版规/引用等子窗口点击时，新小窗跟随该窗口；关闭后仍回到点击前的位置。
+            var owner = sourceWindow is { IsVisible: true } ? sourceWindow : this;
+            if (link.Kind == IslandLinkKind.Thread) new ThreadLinkPreviewWindow(Model, link) { Owner = owner }.Show();
+            else if (link.Kind is IslandLinkKind.Forum or IslandLinkKind.Timeline)
+                new ForumLinkPromptWindow(Model, link, OpenExternal) { Owner = owner }.Show();
+            else OpenExternal(link.Url.AbsoluteUri);
+        }
+        catch (Exception ex) { if (!_closed) Model.Report(ex); }
+        return Task.CompletedTask;
+    }
+    private async void Reference(long id)
+    {
+        // 先展示占位窗口再异步读取，用户不必等待网络即可关闭弹窗。
+        var dialog = new TextWindow($"引用 · No.{id}", "正在读取引用…") { Owner = this };
+        dialog.Show();
+        // 取消源跟随弹窗生命周期；保存 Token 供 await 后检查，不能在此方法返回时提前 Dispose。
+        var cts = new CancellationTokenSource(); var ct = cts.Token;
+        dialog.Closed += (_, _) => { cts.Cancel(); cts.Dispose(); };
+        try
+        {
+            var post = await Model.Api.GetReferenceAsync(id, ct);
+            if (ct.IsCancellationRequested) return;
+            dialog.SetPost(post);
+            // 引用可能只是回复，只有用户选择此操作时才尝试把同一 ID 当主串打开。
+            dialog.AddAction("尝试作为主串打开", async () => { dialog.Close(); await Model.OpenThreadAsync(id); });
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { if (!ct.IsCancellationRequested) dialog.SetHtml(System.Net.WebUtility.HtmlEncode(ex.Message)); }
+    }
+    private void OpenImage(PostImage source, Post post)
+    {
+        // 仅从串阅读区进入时串联同串图片；串列表与引用弹窗保持单图，避免混入其他串。
+        DependencyObject? parent = source;
+        while (parent is not null && !ReferenceEquals(parent, ReaderList)) parent = System.Windows.Media.VisualTreeHelper.GetParent(parent);
+        var gallery = parent is null ? new[] { post } : Model.ReadingPosts.Select(p => p.Post).Where(p => p.HasImage).ToArray();
+        new ImageWindow(gallery.Length == 0 ? [post] : gallery, post.Id, ImageService.BytesAsync,
+            parent is null ? null : Model.CreateImageCursor()) { Owner = this }.Show();
+    }
+}
