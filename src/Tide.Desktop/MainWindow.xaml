@@ -351,7 +351,7 @@
       </Grid>
     </Grid>
     <Border Grid.Row="3" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Background="{DynamicResource Sidebar}" Padding="12,4">
-      <DockPanel><TextBlock DockPanel.Dock="Right" Text="潮汐 0.2.0 · 非官方客户端" Foreground="{DynamicResource Muted}" FontSize="11"/><TextBlock Text="{Binding Status}" Foreground="{DynamicResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis" AutomationProperties.LiveSetting="Polite"/></DockPanel>
+      <DockPanel><TextBlock DockPanel.Dock="Right" Text="潮汐 0.2.1 · 非官方客户端" Foreground="{DynamicResource Muted}" FontSize="11"/><TextBlock Text="{Binding Status}" Foreground="{DynamicResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis" AutomationProperties.LiveSetting="Polite"/></DockPanel>
     </Border>
     <local:FeedbackOverlay x:Name="FeedbackLayer" Grid.RowSpan="4" Panel.ZIndex="100"/>
   </Grid>

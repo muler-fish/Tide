@@ -4,7 +4,7 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <AssemblyName>Tide</AssemblyName>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <Product>潮汐 · X岛</Product>
     <Description>X岛匿名版 Windows 客户端</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>

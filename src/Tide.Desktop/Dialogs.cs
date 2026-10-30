@@ -98,7 +98,7 @@ public sealed class SettingsWindow : DialogWindow
         Label("屏蔽"); Body.Children.Add(Button("屏蔽管理", () => new BlockedThreadsWindow(vm) { Owner = this }.ShowDialog()));
         Label("本机数据"); Body.Children.Add(Hint(vm.Store.Root));
         Body.Children.Add(Hint($"历史 {vm.State.History.Count} 个串 · 草稿 {vm.State.Drafts.Count} 份"));
-        Label("潮汐 0.2.0");
+        Label("潮汐 0.2.1");
         Body.Children.Add(Hint("本软件使用 MiSans 字体。"));
         AddAction("打开数据目录", () => Process.Start(new ProcessStartInfo(vm.Store.Root) { UseShellExecute = true })); AddAction("完成", Close, true);
     }
