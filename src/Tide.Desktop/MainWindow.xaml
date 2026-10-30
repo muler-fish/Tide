@@ -134,7 +134,7 @@
             <StackPanel Margin="0,0,18,0">
               <StackPanel x:Name="FavoriteForumsSection" Margin="0,0,0,8">
                 <TextBlock Text="收藏版块" Style="{StaticResource MutedText}" Margin="10,6,0,6"/>
-                <TextBlock Text="暂无收藏版块" Margin="26,0,0,6" FontSize="11" Foreground="{DynamicResource Muted}">
+                <TextBlock Text="暂无收藏版块" Margin="26,0,0,6" FontSize="12" Foreground="{DynamicResource Muted}">
                   <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding HasFavoriteForums}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
                 </TextBlock>
                 <ItemsControl x:Name="FavoriteForumList" ItemsSource="{Binding FavoriteForums}" ItemTemplate="{StaticResource ForumRowTemplate}"/>
@@ -172,8 +172,8 @@
           <StackPanel Grid.Row="1" Margin="16,0,16,8">
           <ComboBox x:Name="SubscriptionSelector" ItemsSource="{Binding SubscriptionAccounts}" DisplayMemberPath="DisplayName" SelectedValuePath="Id" SelectedValue="{Binding ActiveSubscriptionKey, Mode=TwoWay}" Visibility="{Binding IsSubscriptions, Converter={StaticResource Visible}}" Margin="0,0,0,8" AutomationProperties.Name="当前订阅号"/>
           <DockPanel>
-            <Button DockPanel.Dock="Right" Content="订阅号" Click="SubscriptionSettings_Click" Visibility="{Binding IsSubscriptions, Converter={StaticResource Visible}}" FontSize="11" MinHeight="24" Padding="6,0" Margin="8,0,0,0"/>
-            <Button DockPanel.Dock="Right" Content="版规 ↗" Click="Notice_Click" FontSize="11" MinHeight="24" Padding="0">
+            <Button DockPanel.Dock="Right" Content="订阅号" Click="SubscriptionSettings_Click" Visibility="{Binding IsSubscriptions, Converter={StaticResource Visible}}" FontSize="12" MinHeight="24" Padding="6,0" Margin="8,0,0,0"/>
+            <Button DockPanel.Dock="Right" Content="版规 ↗" Click="Notice_Click" FontSize="12" MinHeight="24" Padding="0">
               <Button.Style><Style TargetType="Button" BasedOn="{StaticResource Quiet}"><Style.Triggers><DataTrigger Binding="{Binding IsLibrary}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Button.Style>
             </Button>
             <TextBlock Text="{Binding ListPageLabel}" Style="{StaticResource MutedText}" VerticalAlignment="Center"/>
@@ -201,11 +201,11 @@
               <StackPanel>
                 <!-- 回复数固定右对齐；窄栏时左侧元信息按原顺序换行，不挤压饼干。 -->
                 <DockPanel x:Name="CardMetadata" Margin="0,0,0,8">
-                  <TextBlock x:Name="CardReplies" DockPanel.Dock="Right" Text="{Binding ReplyLabel}" FontSize="11" Foreground="{DynamicResource Muted}" VerticalAlignment="Top" Margin="8,3,0,0"/>
+                  <TextBlock x:Name="CardReplies" DockPanel.Dock="Right" Text="{Binding ReplyLabel}" FontSize="12" Foreground="{DynamicResource Muted}" VerticalAlignment="Top" Margin="8,3,0,0"/>
                   <WrapPanel>
                     <local:PostIdentity Post="{Binding Post}" ShowSage="False" Margin="0,0,8,2"/>
-                    <TextBlock x:Name="CardDate" Text="{Binding DateLabel}" ToolTip="{Binding Post.Time}" AutomationProperties.Name="{Binding Post.Time}" FontSize="11" Foreground="{DynamicResource Muted}" Margin="0,3,8,2"/>
-                    <TextBlock x:Name="CardForum" Text="{Binding ForumName}" ToolTip="{Binding ForumName}" MaxWidth="140" TextTrimming="CharacterEllipsis" FontSize="11" Foreground="{DynamicResource Muted}" Margin="0,3,0,2"/>
+                    <TextBlock x:Name="CardDate" Text="{Binding DateLabel}" ToolTip="{Binding Post.Time}" AutomationProperties.Name="{Binding Post.Time}" FontSize="12" Foreground="{DynamicResource Muted}" Margin="0,3,8,2"/>
+                    <TextBlock x:Name="CardForum" Text="{Binding ForumName}" ToolTip="{Binding ForumName}" MaxWidth="140" TextTrimming="CharacterEllipsis" FontSize="12" Foreground="{DynamicResource Muted}" Margin="0,3,0,2"/>
                   </WrapPanel>
                 </DockPanel>
                 <Border x:Name="CardSage" Background="{DynamicResource SageBackground}" CornerRadius="4" Padding="6,2" Margin="0,0,0,6" HorizontalAlignment="Left" Visibility="{Binding Post.IsSage, Converter={StaticResource Visible}}">
@@ -221,7 +221,7 @@
                     <local:PostPreview.Style><Style TargetType="local:PostPreview"><Style.Triggers><DataTrigger Binding="{Binding Excerpt}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></local:PostPreview.Style>
                   </local:PostPreview>
                 </DockPanel>
-                <TextBlock Text="{Binding Progress}" FontSize="11" Foreground="{DynamicResource Accent}" Margin="0,6,0,0">
+                <TextBlock Text="{Binding Progress}" FontSize="12" Foreground="{DynamicResource Accent}" Margin="0,6,0,0">
                   <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding Progress}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
                 </TextBlock>
               </StackPanel>
@@ -252,7 +252,7 @@
           <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
           <Border Padding="24,16,24,10" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
             <StackPanel>
-              <TextBlock x:Name="ReaderForum" Text="{Binding ReaderMeta}" Style="{StaticResource MutedText}" FontSize="11" TextWrapping="Wrap"/>
+              <TextBlock x:Name="ReaderForum" Text="{Binding ReaderMeta}" Style="{StaticResource MutedText}" TextWrapping="Wrap"/>
               <TextBlock x:Name="ReaderHeading" Text="{Binding ReaderTitle}" FontSize="20" FontWeight="SemiBold" Margin="0,8,0,8" TextWrapping="Wrap"/>
               <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
@@ -290,8 +290,8 @@
                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <local:PostIdentity Post="{Binding Post}" IsPo="{Binding IsPo}" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="{Binding TimeLabel}" ToolTip="{Binding Post.Time}" Style="{StaticResource MutedText}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0"/>
-                    <Button Grid.Column="2" Content="{Binding Post.Number}" Tag="{Binding Post}" Click="Quote_Click" Style="{StaticResource Quiet}" HorizontalAlignment="Right" Padding="6,0" MinHeight="24" FontSize="11" ToolTip="引用此楼" AutomationProperties.Name="{Binding Post.Number, StringFormat=引用 {0}}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding TimeLabel}" ToolTip="{Binding Post.Time}" Style="{StaticResource MutedText}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0"/>
+                    <Button Grid.Column="2" Content="{Binding Post.Number}" Tag="{Binding Post}" Click="Quote_Click" Style="{StaticResource Quiet}" HorizontalAlignment="Right" Padding="6,0" MinHeight="24" FontSize="12" ToolTip="引用此楼" AutomationProperties.Name="{Binding Post.Number, StringFormat=引用 {0}}"/>
                   </Grid>
                   <local:EmojiLabel x:Name="OriginalPostTitle" Text="{Binding DataContext.OriginalTitle, RelativeSource={RelativeSource AncestorType=Window}}"
                                     FontSize="{Binding DataContext.ReadingFontSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="4,0,0,8">
@@ -350,7 +350,7 @@
       </Grid>
     </Grid>
     <Border Grid.Row="3" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Background="{DynamicResource Sidebar}" Padding="12,4">
-      <DockPanel><TextBlock DockPanel.Dock="Right" Text="潮汐 0.2.0 · 非官方客户端" Foreground="{DynamicResource Muted}" FontSize="10"/><TextBlock Text="{Binding Status}" Foreground="{DynamicResource Muted}" FontSize="10" TextTrimming="CharacterEllipsis" AutomationProperties.LiveSetting="Polite"/></DockPanel>
+      <DockPanel><TextBlock DockPanel.Dock="Right" Text="潮汐 0.2.0 · 非官方客户端" Foreground="{DynamicResource Muted}" FontSize="11"/><TextBlock Text="{Binding Status}" Foreground="{DynamicResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis" AutomationProperties.LiveSetting="Polite"/></DockPanel>
     </Border>
     <local:FeedbackOverlay x:Name="FeedbackLayer" Grid.RowSpan="4" Panel.ZIndex="100"/>
   </Grid>

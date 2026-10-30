@@ -57,7 +57,7 @@ internal static class PostPreviewChecks
                 Require(firstBody.FontSize == size && title.FontSize == size && author.FontSize == size - 1, $"列表正文、标题、作者没有同步阅读字号及层级；TitleFontSize={title.FontSize}, AuthorFontSize={author.FontSize}；" + Describe(firstBody, vm.ReadingFontSize));
                 Require(title.FontWeight == FontWeights.SemiBold && Equals(author.Foreground, Application.Current.FindResource("Muted")), "字号同步后标题加粗或作者浅色丢失");
                 Require(firstBody.LineHeight == size * 1.5 && firstBody.MaxHeight == size * 12 && firstBody.ActualHeight <= size * 12 + .5, "同步字号后八行上限没有重新计算；" + Describe(firstBody, vm.ReadingFontSize));
-                Require(((TextBlock)Named(first, "CardDate")).FontSize == 11 && ((TextBlock)Named(first, "CardReplies")).FontSize == 11, "正文调字号连带改变了元信息字号");
+                Require(((TextBlock)Named(first, "CardDate")).FontSize == 12 && ((TextBlock)Named(first, "CardReplies")).FontSize == 12, "正文调字号连带改变了元信息字号");
                 capture(window, Path.Combine(output, $"cards-font-{size}.png"));
             }
         }
